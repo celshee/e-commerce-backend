@@ -1,55 +1,35 @@
-// const { v4: uuidv4 } = require("uuid");
-//
-// function logEvent({
-//                       service_name,
-//                       event_type,
-//                       log_level = "INFO",
-//                       user_id = null,
-//                       message = "",
-//                       trace_id = uuidv4(),
-//                   }) {
-//     const log = {
-//         timestamp: new Date().toISOString(),
-//         service_name,
-//         environment: "dev",
-//         log_level,
-//         event_type,
-//         trace_id,
-//         user_id,
-//         message,
-//     };
-//
-//     console.log(JSON.stringify(log));
-//     return trace_id;
-// }
-//
-// module.exports = { logEvent };
-/**
- * SOC-Oriented Logger (Trace-ID-Free)
- */
+const os = require("os");
+
 function logEvent({
                       event_type,
                       log_level = "INFO",
                       message = "",
                       user_id = null,
                       source_ip = null,
-                      http_status = null
+                      http_status = null,
+                      request_id = null
                   }) {
     const log = {
-        timestamp: new Date().toISOString(),
-        service_name: "auth-service",
+        "@timestamp": new Date().toISOString(),
+        service: "auth-service",
         environment: "prod",
 
-        log_level,
+        level: log_level,
         event_type,
         message,
 
         user_id,
         source_ip,
-        http_status
+        http_status,
+        request_id,
+
+        host: {
+            hostname: os.hostname(),
+            pid: process.pid
+        }
     };
 
-    console.log(JSON.stringify(log));
+    process.stdout.write(JSON.stringify(log) + "\n");
 }
 
 module.exports = { logEvent };

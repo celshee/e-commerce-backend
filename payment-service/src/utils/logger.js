@@ -1,3 +1,4 @@
+const os = require("os");
 const { v4: uuidv4 } = require("uuid");
 
 /**
@@ -15,32 +16,40 @@ function logEvent({
                       source_ip = null,
                       http_status = null
                   }) {
-    const log = {
-        // ---- Mandatory SOC fields ----
-        timestamp: new Date().toISOString(),        // UTC ISO-8601
-        service_name: "payment-service",
-        environment: "dev",
+    const finalTraceId = trace_id || uuidv4();
 
-        log_level,                                  // INFO | WARN | ERROR
-        event_type,                                // payment_attempt | payment_success | payment_failure
-        trace_id: trace_id || uuidv4(),             // Correlation across services
+    const log = {
+        // ---- ELK / ECS compatible ----
+        "@timestamp": new Date().toISOString(),     // REQUIRED by ELK
+        service: "payment-service",
+        environment: "dev",
+        level: log_level,
+
+        // ---- Event context ----
+        event_type,
         message,
+        trace_id: finalTraceId,
 
         // ---- Security & fraud context ----
-        user_id,                                   // Nullable
-        order_id,                                  // Nullable
-        amount,                                    // Nullable
-        source_ip,                                 // For fraud & geo anomalies
+        user_id,
+        order_id,
+        amount,
+        source_ip,
 
         // ---- Operational context ----
-        http_status                                // Useful during incident review
+        http_status,
+
+        // ---- Host metadata (SOC-grade) ----
+        host: {
+            hostname: os.hostname(),
+            pid: process.pid
+        }
     };
 
-    // MUST be stdout, MUST be JSON
-    console.log(JSON.stringify(log));
+    // Fluent Bit best practice: raw JSON → stdout
+    process.stdout.write(JSON.stringify(log) + "\n");
 
-    // Return trace_id so callers can propagate it
-    return log.trace_id;
+    return finalTraceId;
 }
 
 module.exports = { logEvent };
