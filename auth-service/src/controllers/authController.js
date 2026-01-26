@@ -1,63 +1,104 @@
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
+const authService = require("../services/authService");
 const { logEvent } = require("../utils/logger");
 
-const users = [];
-
 exports.register = async (req, res) => {
-    const { email, password } = req.body;
-    const source_ip = req.ip;
+    const requestId = req.headers["x-request-id"] || "";
+    const endpoint = req.originalUrl;
+    const method = req.method;
+    const userEmail = req.body.email;
 
-    const hashed = await bcrypt.hash(password, 10);
-    const user = { id: users.length + 1, email, password: hashed };
-    users.push(user);
+    try {
+        await authService.register(userEmail, req.body.password);
 
-    logEvent({
-        event_type: "user_registered",
-        user_id: user.id,
-        source_ip,
-        message: "User registered",
-        http_status: 201
-    });
 
-    res.status(201).json({ message: "User registered" });
+        logEvent({
+            service: "auth-service",
+            event_type: "user_registration",
+            event_category: "authentication",
+            severity: "low",
+            request_id: requestId,
+            method,
+            endpoint,
+            status_code: 201,
+            response_time_ms: 0,
+            user_id: userEmail,
+            user_role: "user",
+            source_ip: req.ip,
+            message: `User registered successfully: ${userEmail}`
+        });
+
+        res.status(201).json({ message: "User registered" });
+    } catch (err) {
+
+        logEvent({
+            service: "auth-service",
+            event_type: "user_registration_failed",
+            event_category: "authentication",
+            severity: "high",
+            request_id: requestId,
+            method,
+            endpoint,
+            status_code: 500,
+            response_time_ms: 0,
+            user_id: userEmail,
+            user_role: "user",
+            source_ip: req.ip,
+            message: `Registration failed for ${userEmail}: ${err.message}`
+        });
+
+        console.error("REGISTER ERROR:", err);
+        res.status(500).json({
+            error: "Internal server error",
+            details: err.message
+        });
+    }
 };
 
 exports.login = async (req, res) => {
-    const { email, password } = req.body;
-    const source_ip = req.ip;
+    const requestId = req.headers["x-request-id"] || "";
+    const endpoint = req.originalUrl;
+    const method = req.method;
+    const userEmail = req.body.email;
 
-    const user = users.find(u => u.email === email);
+    try {
+        const token = await authService.login(userEmail, req.body.password);
 
-    logEvent({
-        event_type: "login_attempt",
-        user_id: user?.id || null,
-        source_ip,
-        message: "Login attempt"
-    });
 
-    if (!user || !(await bcrypt.compare(password, user.password))) {
         logEvent({
-            event_type: "login_failure",
-            log_level: "WARN",
-            user_id: user?.id || null,
-            source_ip,
-            message: "Invalid credentials",
-            http_status: 401
+            service: "auth-service",
+            event_type: "user_login",
+            event_category: "authentication",
+            severity: "low",
+            request_id: requestId,
+            method,
+            endpoint,
+            status_code: 200,
+            response_time_ms: 0,
+            user_id: userEmail,
+            user_role: "user",
+            source_ip: req.ip,
+            message: `User logged in successfully: ${userEmail}`
         });
 
-        return res.status(401).json({ error: "Invalid credentials" });
+        res.json({ token });
+    } catch (err) {
+
+        logEvent({
+            service: "auth-service",
+            event_type: "user_login_failed",
+            event_category: "authentication",
+            severity: "medium",
+            request_id: requestId,
+            method,
+            endpoint,
+            status_code: 401,
+            response_time_ms: 0,
+            user_id: userEmail,
+            user_role: "user",
+            source_ip: req.ip,
+            message: `Login failed for ${userEmail}: Invalid credentials`
+        });
+
+        res.status(401).json({ error: "Invalid credentials" });
     }
-
-    const token = jwt.sign({ userId: user.id }, "secret", { expiresIn: "1h" });
-
-    logEvent({
-        event_type: "login_success",
-        user_id: user.id,
-        source_ip,
-        message: "Login successful",
-        http_status: 200
-    });
-
-    res.json({ token });
 };

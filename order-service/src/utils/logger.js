@@ -66,7 +66,7 @@ function logEvent({
         event: {
             type: event_type,              // order_created, order_failed
             category: event_category,      // order
-            severity                      // low / medium / high
+            severity
         },
 
         http: {

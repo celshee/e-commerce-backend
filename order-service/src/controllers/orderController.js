@@ -1,51 +1,48 @@
+const orderService = require("../services/orderService");
 const { logEvent } = require("../utils/logger");
 
-const orders = [];
+exports.createOrder = async (req, res) => {
+    try {
+        const { items } = req.body;
+        const userId = req.user.userId;
 
-exports.createOrder = (req, res) => {
-    const { user_id, amount } = req.body;
+        const order = await orderService.createOrder(userId, items);
 
-    const trace_id = logEvent({
-        service_name: "order-service",
-        event_type: "order_attempt",
-        user_id,
-        message: `Order attempt for amount ${amount}`,
-    });
+        logEvent({
+            service: "order-service",
+            event_type: "order_created",
+            user_id: userId,
+            source_ip: req.ip,
+            message: "Order created"
+        });
 
-    // Simulate failure (10%)
-    // if (Math.random() < 0.1) {
-    //     logEvent({
-    //         service_name: "order-service",
-    //         event_type: "order_failed",
-    //         log_level: "WARN",
-    //         user_id,
-    //         trace_id,
-    //         message: "Order creation failed",
-    //     });
-    //
-    //     return res.status(500).json({ error: "Order failed" });
-    // }
+        res.status(201).json(order);
+    } catch (err) {
+        console.error("createOrder error:", err);
+        res.status(500).json({ error: "Internal server error" });
+    }
 
-    const order = {
-        id: orders.length + 1,
-        user_id,
-        amount,
-        status: "CREATED",
-    };
-
-    orders.push(order);
-
-    logEvent({
-        service_name: "order-service",
-        event_type: "order_created",
-        user_id,
-        trace_id,
-        message: `Order ${order.id} created`,
-    });
-
-    res.status(201).json(order);
 };
 
-exports.getOrders = (req, res) => {
-    res.json(orders);
+exports.getOrders = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const orders = await orderService.getOrders(userId);
+        res.json(orders);
+    } catch {
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+exports.getOrderDetails = async (req, res) => {
+    try {
+        const orderId = req.params.id;
+        const order = await orderService.getOrderDetails(orderId);
+
+        if (!order) return res.status(404).json({ error: "Order not found" });
+
+        res.json(order);
+    } catch {
+        res.status(500).json({ error: "Internal server error" });
+    }
 };
