@@ -1,9 +1,10 @@
 # dependencies
 node_modules/
 
-# env files
+**/node_modules/
 .env
 .env.*
+
 
 # logs
 logs
@@ -11,3 +12,4 @@ logs
 
 # OS
 .DS_Store
+
