@@ -1,47 +1,44 @@
 const db = require("../config/db");
 
-exports.createOrder = async (order) => {
-    const { id, user_id, total_amount, status } = order;
-    const query = `
-        INSERT INTO orders (id, user_id, total_amount, status)
-        VALUES ($1, $2, $3, $4)
-    `;
-    await db.query(query, [id, user_id, total_amount, status]);
+exports.createOrder = async ({ id, user_id, total_amount, status }) => {
+  const q = `
+    INSERT INTO orders (id, user_id, total_amount, status)
+    VALUES ($1, $2, $3, $4)
+  `;
+  await db.query(q, [id, user_id, total_amount, status]);
 };
 
-exports.addOrderItem = async (item) => {
-    const { id, order_id, product_name, price, quantity } = item;
-    const query = `
-        INSERT INTO order_items (id, order_id, product_name, price, quantity)
-        VALUES ($1, $2, $3, $4, $5)
-    `;
-    await db.query(query, [id, order_id, product_name, price, quantity]);
+exports.addOrderItem = async ({ id, order_id, product_name, price, quantity, product_id = null }) => {
+  // product_id is optional (only if you added it in DB). If your table doesn't have it, ignore it.
+  // We'll insert only known columns:
+  const q = `
+    INSERT INTO order_items (id, order_id, product_name, price, quantity)
+    VALUES ($1, $2, $3, $4, $5)
+  `;
+  await db.query(q, [id, order_id, product_name, price, quantity]);
 };
 
 exports.getOrdersByUser = async (user_id) => {
-    const res = await db.query(
-        "SELECT * FROM orders WHERE user_id = $1 ORDER BY created_at DESC",
-        [user_id]
-    );
-    return res.rows;
-};
-exports.updateOrderStatus = async (orderId, status) => {
-    const query = `
-        UPDATE orders
-        SET status=$1
-        WHERE id=$2
-    `;
-    await db.query(query, [status, orderId]);
+  const r = await db.query(
+    "SELECT * FROM orders WHERE user_id = $1 ORDER BY created_at DESC",
+    [user_id]
+  );
+  return r.rows;
 };
 
 exports.getOrderById = async (orderId) => {
-    const orderRes = await db.query("SELECT * FROM orders WHERE id=$1", [orderId]);
-    const itemsRes = await db.query("SELECT * FROM order_items WHERE order_id=$1", [orderId]);
+  const orderRes = await db.query("SELECT * FROM orders WHERE id = $1", [orderId]);
+  if (!orderRes.rows.length) return null;
 
-    if (!orderRes.rows.length) return null;
+  const itemsRes = await db.query("SELECT * FROM order_items WHERE order_id = $1", [orderId]);
 
-    return {
-        ...orderRes.rows[0],
-        items: itemsRes.rows
-    };
+  return {
+    ...orderRes.rows[0],
+    items: itemsRes.rows
+  };
+};
+
+exports.updateOrderStatus = async (orderId, status) => {
+  const q = `UPDATE orders SET status = $1 WHERE id = $2`;
+  await db.query(q, [status, orderId]);
 };

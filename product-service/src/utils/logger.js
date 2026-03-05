@@ -1,28 +1,30 @@
 function logEvent({
-    service,
+    service = "product-service",
     event_type,
-    event_category,
+    event_category = "product",
     severity = "low",
 
-    request_id = null,
-    method = null,
-    endpoint = null,
-    status_code = null,
-    response_time_ms = null,
+    request_id,
+    method,
+    endpoint,
+    status_code,
+    response_time_ms,
 
     user_id = null,
-    user_role = null,
+    user_role = "user",
     source_ip = null,
 
-    message = ""
-}) {
+    product_id = null,
+    cart_product_id = null,
+    cart_quantity = null,
 
+    message
+}) {
     const log = {
         "@timestamp": new Date().toISOString(),
-
         service,
-        service_instance: process.env.HOSTNAME || null,
-        environment: "prod",
+        service_instance: null,
+        environment: process.env.NODE_ENV || "prod",
 
         event: {
             type: event_type,
@@ -45,6 +47,12 @@ function logEvent({
 
         source: {
             ip: source_ip
+        },
+
+        business: {
+            product_id,
+            cart_product_id,
+            cart_quantity
         },
 
         message

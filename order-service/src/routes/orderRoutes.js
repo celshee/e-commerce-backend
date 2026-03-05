@@ -7,5 +7,5 @@ const authMiddleware = require("../middlewares/middleware");
 router.post("/", authMiddleware, orderController.createOrder);
 router.get("/", authMiddleware, orderController.getOrders);
 router.get("/:id", authMiddleware, orderController.getOrderDetails);
-
+router.post("/from-cart", authMiddleware, orderController.createOrderFromCart);
 module.exports = router;

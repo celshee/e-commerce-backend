@@ -1,106 +1,63 @@
-//
-// const os = require("os");
-// const { v4: uuidv4 } = require("uuid");
-//
-// function logEvent({
-//                       service_name,
-//                       event_type,
-//                       log_level = "INFO",
-//                       user_id = null,
-//                       message = "",
-//                       trace_id = uuidv4(),
-//                   }) {
-//     const log = {
-//         "@timestamp": new Date().toISOString(),   // ELK-native timestamp
-//         service: service_name,                   // cleaner field name
-//         environment: "dev",
-//
-//         level: log_level,
-//         event_type,
-//         trace_id,
-//         user_id,
-//         message,
-//
-//         host: {
-//             hostname: os.hostname(),
-//             pid: process.pid
-//         }
-//     };
-//
-//     // Fluent Bit prefers stdout JSON, one line per event
-//     process.stdout.write(JSON.stringify(log) + "\n");
-//
-//     return trace_id;
-// }
-//
-// module.exports = { logEvent };
-
-const os = require("os");
-const { v4: uuidv4 } = require("uuid");
-
 function logEvent({
-                      event_type,
-                      event_category = "order",
-                      severity = "low",
+  service = "order-service",
+  event_type,
+  event_category = "order",
+  severity = "low",
 
-                      request_id = uuidv4(),
-                      method = null,
-                      endpoint = null,
-                      status_code = null,
-                      response_time_ms = null,
+  request_id = null,
+  method = null,
+  endpoint = null,
+  status_code = null,
+  response_time_ms = null,
 
-                      user_id = null,
-                      user_role = "user",
-                      source_ip = null,
+  user_id = null,
+  user_role = "user",
+  source_ip = null,
 
-                      order_id = null,
-                      order_amount = null,
+  order_id = null,
+  order_amount = null,
 
-                      message = ""
-                  }) {
-    const log = {
-        "@timestamp": new Date().toISOString(),
-        service: "order-service",
-        environment: "dev",
+  message = ""
+}) {
+  const log = {
+    "@timestamp": new Date().toISOString(),
 
-        event: {
-            type: event_type,              // order_created, order_failed
-            category: event_category,      // order
-            severity
-        },
+    service,
+    service_instance: process.env.HOSTNAME || null,
+    environment: process.env.ENVIRONMENT || "prod",
 
-        http: {
-            request_id,
-            method,
-            endpoint,
-            status_code,
-            response_time_ms
-        },
+    event: {
+      type: event_type,
+      category: event_category,
+      severity
+    },
 
-        user: {
-            id: user_id,
-            role: user_role
-        },
+    http: {
+      request_id,
+      method,
+      endpoint,
+      status_code,
+      response_time_ms
+    },
 
-        source: {
-            ip: source_ip
-        },
+    user: {
+      id: user_id,
+      role: user_role
+    },
 
-        business: {
-            order_id,
-            order_amount
-        },
+    source: {
+      ip: source_ip
+    },
 
-        message,
+    business: {
+      order_id,
+      order_amount
+    },
 
-        host: {
-            hostname: os.hostname(),
-            pid: process.pid
-        }
-    };
+    message
+  };
 
-    process.stdout.write(JSON.stringify(log) + "\n");
-    return request_id;
+  process.stdout.write(JSON.stringify(log) + "\n");
 }
 
 module.exports = { logEvent };
